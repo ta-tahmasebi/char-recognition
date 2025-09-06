@@ -23,6 +23,9 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED)
 find_package(OpenCV 4.0 REQUIRED)
 
+find_package(CURL REQUIRED)
+find_package(ZLIB REQUIRED)
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MLPACK REQUIRED mlpack)
 include_directories(${MLPACK_INCLUDE_DIRS})
@@ -34,6 +37,11 @@ set(SRC_DIR   "${CMAKE_SOURCE_DIR}/src")
 set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
 set(SOURCES
     ${SRC_DIR}/main.cpp
+        src/download.h
+        src/indicators.h
+        src/color.h
+        src/load.h
+        src/train.h
 )
 
 add_executable(${PROJECT_NAME}
@@ -58,8 +66,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${OpenCV_LIBS}
     ${MLPACK_LIBRARIES}
     Eigen3::Eigen
-
     Python3::Python
+    CURL::libcurl
+    ZLIB::ZLIB
 )
 
 target_link_options(${PROJECT_NAME} PRIVATE
