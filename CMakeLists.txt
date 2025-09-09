@@ -6,11 +6,6 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 project(DigitRecognizer LANGUAGES CXX)
 
 # ------------------------------
-# Options
-# ------------------------------
-option(USE_SYSTEM_NVTX "Link against system NVTX (-DUSE_SYSTEM_NVTX=[ON|OFF])" ON)
-
-# ------------------------------
 # C++ Standard
 # ------------------------------
 set(CMAKE_CXX_STANDARD 17)
@@ -92,14 +87,6 @@ if (UNIX)
     target_link_options(${PROJECT_NAME} PRIVATE -Wl,--no-as-needed)
 endif ()
 
-# ------------------------------
-# NVTX option message
-# ------------------------------
-if (USE_SYSTEM_NVTX)
-    message(STATUS "Linking against system NVTX")
-else ()
-    message(STATUS "Using LibTorch‑bundled NVTX")
-endif ()
 
 # ------------------------------
 # Target properties

@@ -14,6 +14,7 @@
 #include <QLinearGradient>
 #include <QPalette>
 #include <QMouseEvent>
+
 #undef slots
 
 #include <vector>
@@ -88,7 +89,6 @@ public:
         setPalette(pal);
         setAutoFillBackground(true);
 
-        // Main layout
         auto *mainLayout = new QHBoxLayout(this);
         mainLayout->setSpacing(30);
         mainLayout->setContentsMargins(40, 40, 40, 40);
@@ -101,13 +101,16 @@ public:
 
         auto *title = new QLabel("Draw a Digit (0-9)");
         title->setAlignment(Qt::AlignCenter);
-        title->setStyleSheet("font-family: Arial; font-size: 22px; font-weight: bold; color: #2C3E50; padding: 10px;");
+        title->setStyleSheet(
+                "font-family: Arial; font-size: 22px; font-weight: bold; color: #2C3E50; padding: 10px; background: transparent; border: none;");
 
         canvas = new DrawWidget();
 
         auto *buttonContainer = new QWidget();
+        buttonContainer->setStyleSheet("background: transparent; border: none;");
         auto *buttonLayout = new QHBoxLayout(buttonContainer);
         buttonLayout->setContentsMargins(0, 0, 0, 0);
+
 
         auto *btnPredict = new QPushButton("Predict");
         btnPredict->setStyleSheet(
@@ -150,9 +153,10 @@ public:
         frameLayout->addWidget(predictionLabel);
 
         auto *digitOutputsTitle = new QLabel("Model Outputs for Each Digit");
+
         digitOutputsTitle->setAlignment(Qt::AlignCenter);
         digitOutputsTitle->setStyleSheet(
-                "font-family: Arial; font-size: 18px; font-weight: bold; color: #2C3E50; padding: 10px; margin-top: 10px;");
+                "font-family: Arial; font-size: 18px; font-weight: bold; color: #2C3E50; padding: 10px; margin-top: 10px; background: transparent; border: none;");
 
         auto *digitOutputsGrid = new QGridLayout();
         digitOutputsGrid->setSpacing(5);
@@ -168,6 +172,7 @@ public:
 
         auto *digitOutputsContainer = new QWidget();
         digitOutputsContainer->setLayout(digitOutputsGrid);
+        digitOutputsContainer->setStyleSheet("background: transparent; border: none;");
 
         auto *infoText = new QLabel(
                 "Instructions:\n"
