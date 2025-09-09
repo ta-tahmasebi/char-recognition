@@ -1815,17 +1815,202 @@ namespace unicode {
             return width;
         }
 
-// convert UTF-8 string to wstring
-        static inline std::wstring utf8_decode(const std::string &str) {
-            std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-            return myconv.from_bytes(str);
+#ifndef UTF8_WSTRING_HPP
+#define UTF8_WSTRING_HPP
+
+#include <string>
+#include <vector>
+#include <cstdint>
+
+// Replacement for U+FFFD (replacement character)
+        static constexpr char32_t REPLACEMENT_CHAR = 0xFFFDu;
+
+// Decode one UTF-8 code point from 's' starting at index i.
+// On success, returns the codepoint and advances i to the byte after the sequence.
+// On invalid input, returns REPLACEMENT_CHAR and advances i by at least 1.
+        static char32_t utf8_decode_one(const std::string &s, size_t &i) {
+            const unsigned char *data = reinterpret_cast<const unsigned char *>(s.data());
+            size_t n = s.size();
+            if (i >= n) return REPLACEMENT_CHAR;
+
+            unsigned char b0 = data[i];
+
+            // 1-byte (ASCII)
+            if (b0 <= 0x7F) {
+                ++i;
+                return static_cast<char32_t>(b0);
+            }
+
+            // Multi-byte sequences
+            int needed = 0;
+            char32_t cp = 0;
+            if ((b0 & 0xE0) == 0xC0) {          // 110xxxxx
+                needed = 1;
+                cp = b0 & 0x1F;
+            } else if ((b0 & 0xF0) == 0xE0) {   // 1110xxxx
+                needed = 2;
+                cp = b0 & 0x0F;
+            } else if ((b0 & 0xF8) == 0xF0) {   // 11110xxx
+                needed = 3;
+                cp = b0 & 0x07;
+            } else {
+                // Invalid leading byte
+                ++i;
+                return REPLACEMENT_CHAR;
+            }
+
+            if (i + needed >= n) { // not enough bytes
+                i += 1; // advance minimally to avoid infinite loops
+                return REPLACEMENT_CHAR;
+            }
+
+            // accumulate continuation bytes
+            for (int k = 1; k <= needed; ++k) {
+                unsigned char bx = data[i + k];
+                if ((bx & 0xC0) != 0x80) { // not a continuation
+                    ++i; // advance minimally
+                    return REPLACEMENT_CHAR;
+                }
+                cp = (cp << 6) | (bx & 0x3F);
+            }
+
+            // produce final code point and validate (no surrogates, not out of range,
+            // and no overlong sequences)
+            size_t seq_len = static_cast<size_t>(needed) + 1;
+            // check overlong encodings
+            if ((seq_len == 2 && cp <= 0x7F) ||
+                (seq_len == 3 && cp <= 0x7FF) ||
+                (seq_len == 4 && cp <= 0xFFFF) ||
+                (cp > 0x10FFFF) ||
+                (cp >= 0xD800 && cp <= 0xDFFF)) { // surrogate range invalid
+                i += 1;
+                return REPLACEMENT_CHAR;
+            }
+
+            i += seq_len;
+            return cp;
         }
 
-// convert wstring to UTF-8 string
-        static inline std::string utf8_encode(const std::wstring &str) {
-            std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-            return myconv.to_bytes(str);
+// Encode one code point to UTF-8 and append to out string.
+        static void utf8_encode_one(char32_t cp, std::string &out) {
+            if (cp <= 0x7F) {
+                out.push_back(static_cast<char>(cp));
+            } else if (cp <= 0x7FF) {
+                out.push_back(static_cast<char>(0xC0 | ((cp >> 6) & 0x1F)));
+                out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+            } else if (cp <= 0xFFFF) {
+                out.push_back(static_cast<char>(0xE0 | ((cp >> 12) & 0x0F)));
+                out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+                out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+            } else if (cp <= 0x10FFFF) {
+                out.push_back(static_cast<char>(0xF0 | ((cp >> 18) & 0x07)));
+                out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+                out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+                out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+            } else {
+                // invalid -> replacement
+                utf8_encode_one(REPLACEMENT_CHAR, out);
+            }
         }
+
+// Convert UTF-8 std::string -> std::wstring
+        static inline std::wstring utf8_decode(const std::string &s) {
+            std::wstring out;
+            out.reserve(s.size() / 2 + 1);
+
+            size_t i = 0;
+            while (i < s.size()) {
+                char32_t cp = utf8_decode_one(s, i);
+                if (cp == REPLACEMENT_CHAR) {
+                    // push replacement character into wstring using platform's wchar_t width
+                    if (sizeof(wchar_t) == 2) {
+                        // U+FFFD fits in BMP
+                        out.push_back(static_cast<wchar_t>(REPLACEMENT_CHAR));
+                    } else {
+                        out.push_back(static_cast<wchar_t>(REPLACEMENT_CHAR));
+                    }
+                    continue;
+                }
+
+                if (sizeof(wchar_t) == 4) {
+                    // Directly store codepoints
+                    out.push_back(static_cast<wchar_t>(cp));
+                } else if (sizeof(wchar_t) == 2) {
+                    // Encode as UTF-16: surrogate pair if needed
+                    if (cp <= 0xFFFF) {
+                        out.push_back(static_cast<wchar_t>(cp));
+                    } else {
+                        cp -= 0x10000;
+                        wchar_t high = static_cast<wchar_t>(0xD800 + ((cp >> 10) & 0x3FF));
+                        wchar_t low = static_cast<wchar_t>(0xDC00 + (cp & 0x3FF));
+                        out.push_back(high);
+                        out.push_back(low);
+                    }
+                } else {
+                    // Uncommon wchar_t sizes: fallback by truncation (shouldn't happen)
+                    out.push_back(static_cast<wchar_t>(cp));
+                }
+            }
+
+            return out;
+        }
+
+// Convert std::wstring -> UTF-8 std::string
+        static inline std::string utf8_encode(const std::wstring &w) {
+            std::string out;
+            out.reserve(w.size() * 3 + 1);
+
+            size_t i = 0;
+            const size_t n = w.size();
+            while (i < n) {
+                char32_t cp = 0;
+                if (sizeof(wchar_t) == 4) {
+                    // Direct mapping (wchar_t holds full codepoint)
+                    cp = static_cast<char32_t>(w[i]);
+                    ++i;
+                } else if (sizeof(wchar_t) == 2) {
+                    // Handle possible surrogate pair
+                    wchar_t w1 = w[i++];
+                    if (w1 >= 0xD800 && w1 <= 0xDBFF) {
+                        // high surrogate
+                        if (i < n) {
+                            wchar_t w2 = w[i];
+                            if (w2 >= 0xDC00 && w2 <= 0xDFFF) {
+                                ++i;
+                                cp = static_cast<char32_t>(((static_cast<char32_t>(w1 - 0xD800) << 10)
+                                                            | static_cast<char32_t>(w2 - 0xDC00))
+                                                           + 0x10000);
+                            } else {
+                                // invalid low surrogate -> replacement for high surrogate
+                                cp = REPLACEMENT_CHAR;
+                            }
+                        } else {
+                            // missing low surrogate
+                            cp = REPLACEMENT_CHAR;
+                        }
+                    } else if (w1 >= 0xDC00 && w1 <= 0xDFFF) {
+                        // unpaired low surrogate
+                        cp = REPLACEMENT_CHAR;
+                    } else {
+                        cp = static_cast<char32_t>(w1);
+                    }
+                } else {
+                    // Uncommon wchar_t sizes: take value with truncation
+                    cp = static_cast<char32_t>(w[i++]);
+                }
+
+                // Validate codepoint range
+                if (cp > 0x10FFFFu || (cp >= 0xD800u && cp <= 0xDFFFu)) {
+                    cp = REPLACEMENT_CHAR;
+                }
+
+                utf8_encode_one(cp, out);
+            }
+
+            return out;
+        }
+
+#endif // UTF8_WSTRING_HPP
 
     } // namespace details
 

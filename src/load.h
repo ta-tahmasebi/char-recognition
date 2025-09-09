@@ -12,6 +12,8 @@ struct MNISTData {
     int num_images;
     int rows;
     int cols;
+
+    MNISTData() : num_images(0), rows(0), cols(0) {}
 };
 
 struct MNISTDataset {
@@ -104,25 +106,12 @@ std::pair<torch::Tensor, torch::Tensor> to_torch(const MNISTData &dataset) {
     return {images, labels};
 }
 
-void printByIndex(torch::Tensor images,torch::Tensor labels, int idx){
-    std::cout << "Label: " << labels[idx].item<int>() << std::endl;
-    auto img = images[idx][0];
-    for (int r = 0; r < img.size(0); r++) {
-        for (int c = 0; c < img.size(1); c++) {
-            float pixel = img[r][c].item<float>();
-            std::cout << (pixel > 0.5 ? "#" : ".");
-        }
-        std::cout << std::endl;
-    }
-}
-
 MNISTDataset load_dataset() {
-    //TODO assert!
     MNISTData train_data = read_mnist("data/train-images", "data/train-labels");
-    MNISTData test_data  = read_mnist("data/test-images", "data/test-labels");
+    MNISTData test_data = read_mnist("data/test-images", "data/test-labels");
 
     auto [train_images, train_labels] = to_torch(train_data);
-    auto [test_images, test_labels]   = to_torch(test_data);
+    auto [test_images, test_labels] = to_torch(test_data);
 
     return {train_images, train_labels, test_images, test_labels};
 }

@@ -136,6 +136,6 @@ bool downloadProcess() {
         std::filesystem::rename(file.name, std::filesystem::path("data") / file.name);
         std::remove(gz_name.c_str());
     }
-    colorPrint::print("Download completed.", colorPrint::Color::GREEN);
+    colorPrint::println("Download completed.", colorPrint::Color::GREEN);
     return true;
 }

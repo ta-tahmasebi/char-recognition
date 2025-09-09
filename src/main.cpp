@@ -3,10 +3,11 @@
 
 int main(int argc, char *argv[]) {
 
-    if(!downloadProcess()) {
+    if (!downloadProcess()) {
         return -1;
     }
 
-
-    train();
+    if (!train()) {
+        return -1;
+    }
 }
