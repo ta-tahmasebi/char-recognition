@@ -1,4 +1,5 @@
-#pragma once
+#ifndef COLOR_H
+#define COLOR_H
 
 #include <iostream>
 #include <string>
@@ -22,14 +23,8 @@ namespace colorPrint {
         BRIGHT_WHITE = 97
     };
 
-    inline void print(const std::string &text, Color color = Color::RESET, bool bold = false) {
-        std::cout << "\033["
-                  << (bold ? "1;" : "")
-                  << static_cast<int>(color) << "m"
-                  << text << "\033[0m";
-    }
-
-    inline void println(const std::string &text, Color color = Color::RESET, bool bold = false) {
-        print(text + "\n", color, bold);
-    }
+    void print(const std::string &text, Color color = Color::RESET, bool bold = false);
+    void println(const std::string &text, Color color = Color::RESET, bool bold = false);
 }
+
+#endif

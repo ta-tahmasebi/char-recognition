@@ -1,86 +1,107 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-set(PROJECT_NAME "app")
-project(${PROJECT_NAME} LANGUAGES CXX)
+# ------------------------------
+# Project
+# ------------------------------
+project(DigitRecognizer LANGUAGES CXX)
 
-option(USE_SYSTEM_NVTX "Link against system NVTX (–DUSE_SYSTEM_NVTX=[ON|OFF])" ON)
+# ------------------------------
+# Options
+# ------------------------------
+option(USE_SYSTEM_NVTX "Link against system NVTX (-DUSE_SYSTEM_NVTX=[ON|OFF])" ON)
 
+# ------------------------------
+# C++ Standard
+# ------------------------------
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS
-    Core Gui Widgets Network Sql Svg PrintSupport Concurrent Qml Quick
-)
+# ------------------------------
+# Qt Auto Tools
+# ------------------------------
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-if(NOT DEFINED CMAKE_PREFIX_PATH)
-  set(CMAKE_PREFIX_PATH "/opt/libtorch;/opt/Qt6" CACHE PATH "Where to find Qt6 and LibTorch" FORCE)
-endif()
+# ------------------------------
+# Default CMAKE_PREFIX_PATH for Qt6 / LibTorch
+# ------------------------------
+if (NOT DEFINED CMAKE_PREFIX_PATH)
+    set(CMAKE_PREFIX_PATH "/opt/libtorch;/opt/Qt6" CACHE PATH "Where to find Qt6 and LibTorch")
+endif ()
 
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+# ------------------------------
+# Find packages
+# ------------------------------
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Network Sql Svg PrintSupport Concurrent Qml Quick)
 find_package(Torch REQUIRED)
-find_package(OpenCV 4.0 REQUIRED)
-
 find_package(CURL REQUIRED)
 find_package(ZLIB REQUIRED)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(MLPACK REQUIRED mlpack)
-include_directories(${MLPACK_INCLUDE_DIRS})
-link_directories   (${MLPACK_LIBRARY_DIRS})
-
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-
-set(SRC_DIR   "${CMAKE_SOURCE_DIR}/src")
+# ------------------------------
+# Source and include directories
+# ------------------------------
+set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
+
 set(SOURCES
-    ${SRC_DIR}/main.cpp
-        src/download.h
-        src/indicators.h
-        src/color.h
-        src/load.h
-        src/train.h
-        src/UI.cpp
-        src/UI.h
+        ${SRC_DIR}/main.cpp
+        ${SRC_DIR}/UI.cpp
+        ${SRC_DIR}/download.cpp
+        ${SRC_DIR}/train.cpp
+        ${SRC_DIR}/load.cpp
+        ${SRC_DIR}/color.cpp
+
+        ${SRC_DIR}/indicators.h
+        ${SRC_DIR}/UI.h
+        ${SRC_DIR}/download.h
+        ${SRC_DIR}/train.h
+        ${SRC_DIR}/load.h
+        ${SRC_DIR}/color.h
 )
 
+# ------------------------------
+# Executable
+# ------------------------------
 add_executable(${PROJECT_NAME}
-    ${SOURCES}
-    ${UI_FILES}
-    ${QRC_FILES}
+        ${SOURCES}
 )
 
+# ------------------------------
+# Include directories
+# ------------------------------
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${INCLUDE_DIR}
-    ${OpenCV_INCLUDE_DIRS}
-    ${MLPACK_INCLUDE_DIRS}
-    ${EIGEN3_INCLUDE_DIRS}
-    ${Python3_INCLUDE_DIRS}
+        ${INCLUDE_DIR}
 )
 
+# ------------------------------
+# Link libraries
+# ------------------------------
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Sql
-    Qt6::Svg Qt6::PrintSupport Qt6::Concurrent Qt6::Qml Qt6::Quick
-
-    ${TORCH_LIBRARIES}
-    ${OpenCV_LIBS}
-    ${MLPACK_LIBRARIES}
-    Eigen3::Eigen
-    Python3::Python
-    CURL::libcurl
-    ZLIB::ZLIB
+        Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::Sql
+        Qt6::Svg Qt6::PrintSupport Qt6::Concurrent Qt6::Qml Qt6::Quick
+        ${TORCH_LIBRARIES}
+        CURL::libcurl
+        ZLIB::ZLIB
 )
 
-target_link_options(${PROJECT_NAME} PRIVATE
-    -Wl,--no-as-needed
-)
+# ------------------------------
+# Platform-specific linker options
+# ------------------------------
+if (UNIX)
+    target_link_options(${PROJECT_NAME} PRIVATE -Wl,--no-as-needed)
+endif ()
 
-if(USE_SYSTEM_NVTX)
-  message(STATUS "Linking against system NVTX")
-else()
-  message(STATUS "Using LibTorch‑bundled NVTX")
-endif()
+# ------------------------------
+# NVTX option message
+# ------------------------------
+if (USE_SYSTEM_NVTX)
+    message(STATUS "Linking against system NVTX")
+else ()
+    message(STATUS "Using LibTorch‑bundled NVTX")
+endif ()
 
+# ------------------------------
+# Target properties
+# ------------------------------
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)

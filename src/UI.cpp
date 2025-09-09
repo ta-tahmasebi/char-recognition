@@ -6,7 +6,6 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QFrame>
-#include <QGridLayout>
 #include <QPainter>
 #include <QPen>
 #include <QImage>
@@ -15,7 +14,6 @@
 #include <QLinearGradient>
 #include <QPalette>
 #include <QMouseEvent>
-
 #undef slots
 
 #include <vector>
