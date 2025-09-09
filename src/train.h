@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cinttypes>
 #include <torch/torch.h>
+#include <torch/script.h>
 
 #include "load.h"
 #include "color.h"
@@ -178,12 +179,60 @@ bool train() {
     double acc = total ? (100.0 * static_cast<double>(correct) / static_cast<double>(total)) : 0.0;
     printAcc(acc, correct, total);
 
-    std::string model_path = "data/mnist_cnn.pt";
-    torch::save(model, model_path);
+    std::string model_path = "data/model.pt";
+    {
+        torch::serialize::OutputArchive output_archive;
+        model->save(output_archive);
+        output_archive.save_to(model_path);
+    }
     std::cout << "Model saved to " << model_path << "\n";
+
     colorPrint::println("Train completed.", colorPrint::Color::GREEN);
 
     return true;
 }
 
+class Predictor {
+public:
+    explicit Predictor(std::string model_path = "./data/model.pt")
+            : device_(torch::cuda::is_available() ? torch::kCUDA : torch::kCPU),
+              model_path_(std::move(model_path)),
+              initialized_(false) {}
 
+    std::vector<float> predict(const std::vector<float>& input) {
+        if (!initialized_) load_model();
+
+        if (input.size() != 28 * 28) {
+            throw std::runtime_error("Input vector must be size 28*28.");
+        }
+
+        torch::Tensor img_tensor = torch::from_blob(
+                const_cast<float*>(input.data()), {1, 1, 28, 28}, torch::kFloat32
+        ).clone().to(device_);
+
+        torch::NoGradGuard no_grad;
+        auto output = model_->forward(img_tensor);
+        output = output.to(torch::kCPU).contiguous();
+
+        int64_t ncols = output.size(1);
+        std::vector<float> result(ncols);
+        std::memcpy(result.data(), output.data_ptr<float>(), sizeof(float) * ncols);
+        return result;
+    }
+
+private:
+    void load_model() {
+        model_ = std::make_shared<CNN>();
+        torch::serialize::InputArchive input_archive;
+        input_archive.load_from(model_path_);
+        model_->load(input_archive);
+        model_->to(device_);
+        model_->eval();
+        initialized_ = true;
+    }
+
+    torch::Device device_;
+    std::string model_path_;
+    std::shared_ptr<CNN> model_;
+    bool initialized_;
+};

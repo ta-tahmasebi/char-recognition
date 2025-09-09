@@ -1,14 +1,4 @@
-//
-// Created by amirmahdi on 9/9/25.
-//
+#pragma once
+#include <QWidget>
 
-#ifndef APP_UI_H
-#define APP_UI_H
-
-
-class UI {
-
-};
-
-
-#endif //APP_UI_H
+int runVisualApp(int argc, char *argv[]);

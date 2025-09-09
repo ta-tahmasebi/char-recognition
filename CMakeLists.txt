@@ -42,6 +42,8 @@ set(SOURCES
         src/color.h
         src/load.h
         src/train.h
+        src/UI.cpp
+        src/UI.h
 )
 
 add_executable(${PROJECT_NAME}
