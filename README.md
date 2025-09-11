@@ -25,8 +25,9 @@ Run the program with one of the following options:
 * **ui**:
   Open the graphical interface to draw digits and test the trained model.
   
-![ui](images/3.gif?raw=true)
-
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/3400d623-8b07-4285-b1c6-9066d0cb1bd1" width="90%" controls></video>
+</p>
 
 ## Third-party Libraries Used
 - **[Qt6](https://www.qt.io/)**
